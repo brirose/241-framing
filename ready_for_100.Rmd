@@ -1,11 +1,11 @@
 ---
-title: "Framing Ready for 100"
-author: "Bri Baker"
+title: "Assignemnt 4.2: Framing Ready for 100"
+author: "Bri Baker, Craig Kopulsky, Lauren Skube"
 date: "1/27/2021"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr) #for data wrangling
 library(readxl) #for reading Excel file
@@ -17,38 +17,76 @@ library(stringr) #for text manipulation
 `%nin%` = Negate(`%in%`)
 ```
 
-```{r data}
-#reading datasets:
-data <- read.csv("congress_116_data.csv")
-metadata <- read.csv("Combined_Metadata.csv")
+## Introduction
+
+To progress the *Ready for 100* policy campaign, we need to identify and sway potential key players in the legislature. Herein we outline our code and reasoning for the identification of a member of congress whose vote margins, League of Conservation Voters (LCV) score, and district preferences make their district an ideal choice for a public campaign pushing *Ready for 100*. 
+
+We identified District 6 of Florida as a key public audience for our campaign. 
+
+
+## Process
+
+
+### Data
+
+The dataset utilized includes: politicians elected to the U.S. House of Representatives in 2018, constituent opinion in their districts on a variety of measures, and their LCV score in 2019.
+
+```{r data, message=FALSE}
+
+data <- read_csv("congress_116_data.csv") # 116th congress data
+metadata <- read_csv("Combined_Metadata.csv") # metadata for "data"
 
 #reordering metadata 'variable' to match variable order in 'data':
 order <- match(names(data),metadata$variable)
 metadata <- metadata[order,]
 
+```
 
-## Data filtering and visualization to examine electoral vulnerability ----
+### Primary and general election vulnerability
+
+Congresspeople who are likely to be receptive to pressure about policy change from their constituencies are those in districts with narrow vote margins, so we first identified the vulnerable House members. We did this by filtering the dataset to include members whose vote margin was less than 0.6 in either the primary or the general election.
+
+```{r vulnerable, fig.cap="Figure 1. Congressional Districts with Vote Percentages of 60% or less in 2018 House Primary or General Elections"}
 
 #selecting for vulnerable House members:
 vulnerable <- data %>%
   filter(primary_percent < 0.6 | general_percent < 0.6)
-```
 
-```{r}
 #plotting the distribution of primary and general margins:
 group.colors <- c(D = "blue", R = "red", IDP ="green")
-ggplot(vulnerable, aes(x= primary_percent, 
-                       y= general_percent,
+ggplot(vulnerable, aes(x = primary_percent, 
+                       y = general_percent,
                        color = party)) + 
   geom_point() +
-  geom_text(aes(label=district_id),
-            hjust=0, vjust=0) +
-  scale_color_manual(values=group.colors) + 
-  ggtitle("Vote Percentages in 2018 House Elections")
+  geom_text(aes(label = district_id),
+            hjust = 0, vjust = 0) +
+  scale_color_manual(values = group.colors) + 
+  labs(x = "Primary Election Votes (%)",
+       y = "General Election Votes (%)")
+
+
+```
+
+```{r lcv, fig.cap= "Figure 2. LCV Scores of Representatives from Congressional Districts with Vote Percentages of 60% or less in 2018 House Primary or General Elections"}
+
+lcv_vulnerable <- vulnerable %>% 
+  select(lcv_score, party) 
+
+ggplot(lcv_vulnerable, aes(x = party, y = lcv_score)) +
+  geom_jitter()
 ```
 
 
-```{r}
+Both Democratic and Republican congresspeople are vulnerable in their upcoming reelection (Figure 1). To ensure that *Ready for 100* policy progresses, it is important to ensure that districts that leaned Democratic in 2018 (and therefore chose representatives with generally higher LCV scores) stay that way in the upcoming election. However, there are many Republican-leaning districts along the vulnerable margin where the representatives have high to mid-level LCV scores (Figure 2).
+
+## Target district determinination
+
+We intend to target a district with a vulnerable mid-level LCV representative whose constituency has a high percentage of people who are on on some level concerned about the impacts of climate change and interested in funding renewables.
+
+With that in mind, we filtered Republican representatives by primary vulnerability (<0.6) and LCV score (<55) to find districts with high primary vulnerability and low LCV scores. We then plotted those individuals against the proportions of their constituencies that support the funding of renewable energy research and development.
+
+
+```{r district choice, fig.cap="Figure 3. LCV Scores of vulnerable Republicans with LCV scores less than 55 compared to proportion of constituents that want to fund renewables."}
 #selecting republicans vulnerable to primary challenges who are not strongest possible environmentalists:
 vulnerableR <- data %>%
   filter(primary_percent < 0.6 & party == "R" & lcv_score<55)
@@ -59,17 +97,19 @@ ggplot(vulnerableR, aes(x= lcv_score,
   geom_point() +
   geom_text(aes(label=district_id),
             hjust=0, vjust=0) +
-  ggtitle("LCV Scores of vulnerable Reps with LCV scores less than 55 compared to \nproportion of constituents that want to fund renewables") +
+  labs(x = "LCV score",
+       y = "Percent of constituency (%)") +
   xlim(c(0,40))
+
 ```
-
-Identifying FL06 as district of choice; high support for renewables and relatively low LCV score.
-
-```{r}
+```{r, echo=FALSE}
 FL06 <- vulnerableR %>% 
   filter(district_id =="FL 06")
- 
 ```
+
+
+
+From this analysis, we identified District 06 in Florida as a likely district where the opinions of the constituency could sway policy decisions regarding *Ready for 100* of their vulnerable representative (Figure 3). This is because constituents in this district have high support for renewables (`r round(FL06$fundrenewables, 2)`%) and the representative Michael Waltz, has an LCV score closer to 50 than representatives in other constituencies (LCV = `r FL06$lcv_score`). In the 2018 election Michael Waltz won `r round(100*FL06$primary_percent, 2)`% of the vote in the primary and `r round(100*FL06$general_percent, 2)`% in the general election which indicates that he is vulnerable to pressure from his constituency.
 
 
 ## Key Public Audience
