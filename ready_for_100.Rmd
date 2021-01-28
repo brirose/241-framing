@@ -1,0 +1,85 @@
+---
+title: "Framing Ready for 100"
+author: "Bri Baker"
+date: "1/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr) #for data wrangling
+library(readxl) #for reading Excel file
+library(tidyverse) #for dataframe functions
+library(janitor) #for renaming variables
+library(ggplot2) #for plotting
+library(stringr) #for text manipulation
+
+`%nin%` = Negate(`%in%`)
+```
+
+```{r data}
+#reading datasets:
+data <- read.csv("congress_116_data.csv")
+metadata <- read.csv("Combined_Metadata.csv")
+
+#reordering metadata 'variable' to match variable order in 'data':
+order <- match(names(data),metadata$variable)
+metadata <- metadata[order,]
+
+
+## Data filtering and visualization to examine electoral vulnerability ----
+
+#selecting for vulnerable House members:
+vulnerable <- data %>%
+  filter(primary_percent < 0.6 | general_percent < 0.6)
+```
+
+```{r}
+#plotting the distribution of primary and general margins:
+group.colors <- c(D = "blue", R = "red", IDP ="green")
+ggplot(vulnerable, aes(x= primary_percent, 
+                       y= general_percent,
+                       color = party)) + 
+  geom_point() +
+  geom_text(aes(label=district_id),
+            hjust=0, vjust=0) +
+  scale_color_manual(values=group.colors) + 
+  ggtitle("Vote Percentages in 2018 House Elections")
+```
+
+
+```{r}
+#selecting republicans vulnerable to primary challenges who are not strongest possible environmentalists:
+vulnerableR <- data %>%
+  filter(primary_percent < 0.6 & party == "R" & lcv_score<55)
+
+#plotting the distribution of LCV scores vs. constituent support to address climate:
+ggplot(vulnerableR, aes(x= lcv_score, 
+                       y= fundrenewables)) + 
+  geom_point() +
+  geom_text(aes(label=district_id),
+            hjust=0, vjust=0) +
+  ggtitle("LCV Scores of vulnerable Reps with LCV scores less than 55 compared to \nproportion of constituents that want to fund renewables") +
+  xlim(c(0,40))
+```
+
+Identifying FL06 as district of choice; high support for renewables and relatively low LCV score.
+
+```{r}
+FL06 <- vulnerableR %>% 
+  filter(district_id =="FL 06")
+ 
+```
+
+
+## Key Public Audience
+
+Southern st johns, flagler, volusia and eastern lake county
+84% White
+$43,375 median income
+unemployment 11%
+67% of folks think harm to future generations
+54% climate change human caused
+
+economic and personal rights for clean env for your kids framing
+
